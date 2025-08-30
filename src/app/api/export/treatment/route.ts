@@ -12,7 +12,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid mediumOut' }, { status: 400 })
     }
     const pdf = await renderTreatmentPDF(parsed.data)
-    return new NextResponse(pdf, {
+    const body = new Blob([pdf], { type: 'application/pdf' })
+    return new NextResponse(body, {
       headers: {
         'content-type': 'application/pdf',
         'content-disposition': 'attachment; filename="treatment.pdf"'

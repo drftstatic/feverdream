@@ -12,7 +12,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid posterSpec' }, { status: 400 })
     }
     const png = await renderPoster(parsed.data.posterSpec)
-    return new NextResponse(png, {
+    const body = new Blob([png], { type: 'image/png' })
+    return new NextResponse(body, {
       headers: {
         'content-type': 'image/png',
         'content-disposition': 'attachment; filename="poster.png"'

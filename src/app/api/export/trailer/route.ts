@@ -12,7 +12,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid bigOut' }, { status: 400 })
     }
     const zip = await renderTrailerZip(parsed.data)
-    return new NextResponse(zip, {
+    const body = new Blob([zip], { type: 'application/zip' })
+    return new NextResponse(body, {
       headers: {
         'content-type': 'application/zip',
         'content-disposition': 'attachment; filename="trailer.zip"'
