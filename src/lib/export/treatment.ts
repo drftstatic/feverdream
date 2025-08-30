@@ -1,42 +1,59 @@
 import type { MediumOut } from '@/lib/schema'
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 
 export async function renderTreatmentPDF(data: MediumOut): Promise<Uint8Array> {
-  try {
-    const { jsPDF } = await import('jspdf')
-    const doc = new jsPDF({ unit: 'pt', format: 'letter' })
-    const margin = 48
-    let y = margin
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(20)
-    doc.text('Treatment • Fever Dream Cinema', margin, y)
-    y += 24
+  const pdfDoc = await PDFDocument.create()
+  const page = pdfDoc.addPage([612, 792]) // Letter size in points
+  const { width } = page.getSize()
+  const margin = 48
+  let y = 792 - margin
 
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(12)
-    doc.text(`Logline: ${data.logline}`, margin, y, { maxWidth: 540 })
-    y += 24
-    doc.text('Act I', margin, y)
-    y += 16
-    doc.text(data.acts.i, margin, y, { maxWidth: 540 })
-    y += 40
-    doc.text('Act II', margin, y)
-    y += 16
-    doc.text(data.acts.ii, margin, y, { maxWidth: 540 })
-    y += 40
-    doc.text('Act III', margin, y)
-    y += 16
-    doc.text(data.acts.iii, margin, y, { maxWidth: 540 })
-    y += 40
-    doc.setFont('helvetica', 'bold')
-    doc.text('Mood Keywords:', margin, y)
-    y += 16
-    doc.setFont('helvetica', 'normal')
-    doc.text(data.moodKeywords.join(', '), margin, y, { maxWidth: 540 })
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
 
-    const arr = doc.output('arraybuffer') as ArrayBuffer
-    return new Uint8Array(arr)
-  } catch {
-    // Minimal blank PDF header as fallback (not a valid full PDF but non-empty)
-    return new TextEncoder().encode('%PDF-1.4\n%mock\n')
+  page.drawText('Treatment • Fever Dream Cinema', {
+    x: margin,
+    y,
+    size: 20,
+    font: fontBold,
+    color: rgb(0, 0, 0)
+  })
+  y -= 28
+
+  const drawParagraph = (title: string, text: string) => {
+    page.drawText(title, { x: margin, y, size: 12, font: fontBold })
+    y -= 16
+    const maxWidth = width - margin * 2
+    const words = text.split(' ')
+    let line = ''
+    const size = 12
+    while (words.length) {
+      const test = line + (line ? ' ' : '') + words[0]
+      const w = font.widthOfTextAtSize(test, size)
+      if (w > maxWidth) {
+        page.drawText(line, { x: margin, y, size, font })
+        y -= 14
+        line = ''
+      } else {
+        line = test
+        words.shift()
+      }
+    }
+    if (line) {
+      page.drawText(line, { x: margin, y, size, font })
+      y -= 18
+    }
   }
+
+  drawParagraph('Logline', data.logline)
+  drawParagraph('Act I', data.acts.i)
+  drawParagraph('Act II', data.acts.ii)
+  drawParagraph('Act III', data.acts.iii)
+
+  page.drawText('Mood Keywords:', { x: margin, y, size: 12, font: fontBold })
+  y -= 16
+  page.drawText(data.moodKeywords.join(', '), { x: margin, y, size: 12, font })
+
+  const pdfBytes = await pdfDoc.save()
+  return pdfBytes
 }

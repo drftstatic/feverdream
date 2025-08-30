@@ -1,48 +1,41 @@
 import type { BigOut } from '@/lib/schema'
+import { PNG } from 'pngjs'
 
 async function renderStoryboardPng(labels: string[]): Promise<Uint8Array> {
-  try {
-    const { createCanvas } = await import('@napi-rs/canvas')
-    const cols = 3
-    const rows = 3
-    const w = 900
-    const h = 900
-    const canvas = createCanvas(w, h)
-    const ctx = canvas.getContext('2d')
-    ctx.fillStyle = '#111'
-    ctx.fillRect(0, 0, w, h)
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)'
-    for (let r = 1; r < rows; r++) {
-      const y = (h / rows) * r
-      ctx.beginPath()
-      ctx.moveTo(0, y)
-      ctx.lineTo(w, y)
-      ctx.stroke()
+  const cols = 3
+  const rows = 3
+  const w = 900
+  const h = 900
+  const png = new PNG({ width: w, height: h })
+  const bg = 0x11
+  // Fill background
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = (w * y + x) << 2
+      png.data[idx] = bg
+      png.data[idx + 1] = bg
+      png.data[idx + 2] = bg
+      png.data[idx + 3] = 255
     }
-    for (let c = 1; c < cols; c++) {
-      const x = (w / cols) * c
-      ctx.beginPath()
-      ctx.moveTo(x, 0)
-      ctx.lineTo(x, h)
-      ctx.stroke()
-    }
-    ctx.fillStyle = '#fff'
-    ctx.font = '20px sans-serif'
-    ctx.textAlign = 'center'
-    labels.slice(0, 9).forEach((label, i) => {
-      const r = Math.floor(i / cols)
-      const c = i % cols
-      const cx = c * (w / cols) + w / cols / 2
-      const cy = r * (h / rows) + h / rows / 2
-      ctx.fillText(label, cx, cy)
-    })
-    const buf: Buffer = canvas.toBuffer('image/png') as unknown as Buffer
-    return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
-  } catch {
-    const b64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGMAAQAABQABDQottQAAAABJRU5ErkJggg=='
-    const buf = Buffer.from(b64, 'base64')
-    return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
   }
+  // Grid lines
+  const line = (x: number, y: number) => {
+    const idx = (w * y + x) << 2
+    png.data[idx] = 255
+    png.data[idx + 1] = 255
+    png.data[idx + 2] = 255
+    png.data[idx + 3] = 60
+  }
+  for (let r = 1; r < rows; r++) {
+    const y = Math.floor((h / rows) * r)
+    for (let x = 0; x < w; x++) line(x, y)
+  }
+  for (let c = 1; c < cols; c++) {
+    const x = Math.floor((w / cols) * c)
+    for (let y = 0; y < h; y++) line(x, y)
+  }
+  const buf: Buffer = PNG.sync.write(png)
+  return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
 }
 
 function buildBeatsTxt(beats: BigOut['beats']): string {
