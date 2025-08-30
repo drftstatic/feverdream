@@ -1,6 +1,6 @@
 import type { MediumOut } from '@/lib/schema'
 
-export async function renderTreatmentPDF(data: MediumOut): Promise<Buffer> {
+export async function renderTreatmentPDF(data: MediumOut): Promise<Uint8Array> {
   try {
     const { jsPDF } = await import('jspdf')
     const doc = new jsPDF({ unit: 'pt', format: 'letter' })
@@ -34,10 +34,9 @@ export async function renderTreatmentPDF(data: MediumOut): Promise<Buffer> {
     doc.text(data.moodKeywords.join(', '), margin, y, { maxWidth: 540 })
 
     const arr = doc.output('arraybuffer') as ArrayBuffer
-    return Buffer.from(arr)
+    return new Uint8Array(arr)
   } catch {
     // Minimal blank PDF header as fallback (not a valid full PDF but non-empty)
-    return Buffer.from('%PDF-1.4\n%mock\n', 'utf-8')
+    return new TextEncoder().encode('%PDF-1.4\n%mock\n')
   }
 }
-

@@ -1,7 +1,7 @@
 // Poster generator using node-canvas if available; fallback to a tiny PNG placeholder
 import type { SmallOut } from '@/lib/schema'
 
-async function renderWithCanvas(spec: SmallOut['posterSpec']): Promise<Buffer> {
+async function renderWithCanvas(spec: SmallOut['posterSpec']): Promise<Uint8Array> {
   const { createCanvas } = await import('@napi-rs/canvas')
   const width = 800
   const height = 1200
@@ -44,17 +44,19 @@ async function renderWithCanvas(spec: SmallOut['posterSpec']): Promise<Buffer> {
   ctx.font = '16px monospace'
   ctx.fillText('Fever Dream Cinema • mock preview', width / 2, height - 40)
 
-  return canvas.toBuffer('image/png')
+  const buf: Buffer = canvas.toBuffer('image/png') as unknown as Buffer
+  return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
 }
 
-function tinyPlaceholder(): Buffer {
+function tinyPlaceholder(): Uint8Array {
   // 1x1 transparent PNG
   const b64 =
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGMAAQAABQABDQottQAAAABJRU5ErkJggg=='
-  return Buffer.from(b64, 'base64')
+  const buf = Buffer.from(b64, 'base64')
+  return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
 }
 
-export async function renderPoster(spec: SmallOut['posterSpec']): Promise<Buffer> {
+export async function renderPoster(spec: SmallOut['posterSpec']): Promise<Uint8Array> {
   try {
     return await renderWithCanvas(spec)
   } catch {

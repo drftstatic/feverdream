@@ -1,6 +1,6 @@
 import type { BigOut } from '@/lib/schema'
 
-async function renderStoryboardPng(labels: string[]): Promise<Buffer> {
+async function renderStoryboardPng(labels: string[]): Promise<Uint8Array> {
   try {
     const { createCanvas } = await import('@napi-rs/canvas')
     const cols = 3
@@ -36,10 +36,12 @@ async function renderStoryboardPng(labels: string[]): Promise<Buffer> {
       const cy = r * (h / rows) + h / rows / 2
       ctx.fillText(label, cx, cy)
     })
-    return canvas.toBuffer('image/png')
+    const buf: Buffer = canvas.toBuffer('image/png') as unknown as Buffer
+    return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
   } catch {
     const b64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGMAAQAABQABDQottQAAAABJRU5ErkJggg=='
-    return Buffer.from(b64, 'base64')
+    const buf = Buffer.from(b64, 'base64')
+    return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
   }
 }
 
@@ -62,7 +64,7 @@ function buildSrt(lines: string[]): string {
     .join('')
 }
 
-export async function renderTrailerZip(data: BigOut): Promise<Buffer> {
+export async function renderTrailerZip(data: BigOut): Promise<Uint8Array> {
   const JSZip = (await import('jszip')).default
   const zip = new JSZip()
   const beatsTxt = buildBeatsTxt(data.beats)
@@ -73,6 +75,6 @@ export async function renderTrailerZip(data: BigOut): Promise<Buffer> {
   zip.file('vo.srt', srt)
   zip.file('storyboard.png', storyboard)
 
-  const content = await zip.generateAsync({ type: 'nodebuffer' })
-  return content
+  const content = await zip.generateAsync({ type: 'uint8array' })
+  return content as Uint8Array
 }
